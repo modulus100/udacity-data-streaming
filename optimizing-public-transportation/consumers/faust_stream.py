@@ -41,16 +41,10 @@ table = app.Table(
 
 
 @app.agent(topic)
-async def station_event(events):
-    async for e in events:
-        if e.red:
-            line = 'red'
-        elif e.blue:
-            line = 'blue'
-        else:
-            line = 'green'
-
-        transformed_station = TransformedStation(e.station_id, e.stop_name, e.order, line)
+async def station_event(stations):
+    async for station in stations:
+        line = "red" if station.red else "blue" if station.blue else "green"
+        transformed_station = TransformedStation(station.station_id, station.stop_name, station.order, line)
         table[transformed_station.station_id] = transformed_station
 
 
