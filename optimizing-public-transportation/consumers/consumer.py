@@ -16,6 +16,7 @@ class KafkaConsumer:
 
     # broker_url = "PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094"
     broker_url = "PLAINTEXT://localhost:9092"
+    schema_registry_url = "http://localhost:8081"
 
     def __init__(
         self,
@@ -40,7 +41,7 @@ class KafkaConsumer:
         }
 
         if is_avro is True:
-            self.broker_properties["schema.registry.url"] = "http://localhost:8081"
+            self.broker_properties["schema.registry.url"] = self.schema_registry_url
             self.consumer = AvroConsumer(self.broker_properties)
         else:
             self.consumer = Consumer(self.broker_properties)
