@@ -13,7 +13,7 @@ class Producer:
 
     # Tracks existing topics across all Producer instances
     existing_topics = set([])
-    broker_url: str = "PLAINTEXT://localhost:9092,PLAINTEXT://localhost:9093,PLAINTEXT://localhost:9094"
+    broker_url: str = "PLAINTEXT://localhost:9092"
     schema_registry_url: str = "http://localhost:8081"
 
     def __init__(
@@ -68,7 +68,7 @@ class Producer:
 
     def topic_created(self):
         topic_props = self.admin_client.list_topics(timeout=5)
-        topic_names = set(topic.topic_name for topic in iter(topic_props.topics.values()))
+        topic_names = set(topic.topic for topic in iter(topic_props.topics.values()))
         return self.topic_name in topic_names
 
     def time_millis(self):
