@@ -5,7 +5,7 @@ from schemas import radisSchema, riskEventSchema, customerSchema
 
 # TO-DO: create a StructType for the Kafka redis-server topic which has all changes made to Redis - before Spark
 # 3.0.0, schema inference is not automatic
-radisEventSchema = radisSchema
+radisSchema = radisSchema
 
 # TO-DO: create a StructType for the Customer JSON that comes from Redis- before Spark 3.0.0,
 # schema inference is not automatic
@@ -70,7 +70,7 @@ redisEventsDF = kafkaRedisListenerDF.selectExpr("cast(value as string) value")
 # storing them in a temporary view called RedisSortedSet
 
 redisEventsDF\
-    .withColumn("value", from_json("value", radisEventSchema)) \
+    .withColumn("value", from_json("value", radisSchema)) \
     .select(col('value.existType'), col('value.Ch'), col('value.Incr'), col('value.zSetEntries')) \
     .createOrReplaceTempView("RedisSortedSet")
 
