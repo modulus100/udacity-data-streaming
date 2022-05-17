@@ -69,8 +69,9 @@ kafkaRedisDF = stediEventsListenerDF.selectExpr("cast(value as string) value")
 # +------------+-----+-----------+------------+---------+-----+-----+-----------------+
 #
 # storing them in a temporary view called RedisSortedSet
-kafkaRedisDF.withColumn("value", from_json("value", radisServerSchema))\
-    .select(('value.key', 'value.existType', 'value.Ch', 'value.Incr', 'value.zSetEntries'))\
+kafkaRedisDF\
+    .withColumn("value", from_json("value", radisServerSchema))\
+    .select(*('value.key', 'value.existType', 'value.Ch', 'value.Incr', 'value.zSetEntries'))\
     .withColumnRenamed('Ch', 'ch')\
     .withColumnRenamed('Incr', 'incr')\
     .withColumn('value', lit(None).cast(StringType()))\
