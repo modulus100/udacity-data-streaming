@@ -1,38 +1,19 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, to_json, col, unbase64, base64, split, expr
-from pyspark.sql.types import StructField, StructType, StringType, BooleanType, ArrayType, DateType, FloatType
+from pyspark.sql.functions import from_json, col, unbase64, split, expr
+
+from schemas import radisEventSchema, stediEventSchema, customerSchema
 
 # TO-DO: create a StructType for the Kafka redis-server topic which has all changes made to Redis - before Spark
 # 3.0.0, schema inference is not automatic
-radisEventSchema = StructType([
-    StructField("key", StringType()),
-    StructField("existType", StringType()),
-    StructField("Ch", BooleanType()),
-    StructField("Incr", BooleanType()),
-    StructField("zSetEntries", ArrayType(
-        StructType([
-            StructField("element", StringType()),
-            StructField("Score", StringType())
-        ])
-    ))
-])
+radisEventSchema = radisEventSchema
 
 # TO-DO: create a StructType for the Customer JSON that comes from Redis- before Spark 3.0.0,
 # schema inference is not automatic
-customerSchema = StructType([
-    StructField("customer", StringType()),
-    StructField("score", StringType()),
-    StructField("email", StringType()),
-    StructField("birthYear", StringType())
-])
+customerSchema = customerSchema
 
 # TO-DO: create a StructType for the Kafka stedi-events topic which has the Customer Risk JSON that comes from Redis-
 # before Spark 3.0.0, schema inference is not automatic
-stediEventSchema = StructType([
-    StructField("customer", StringType()),
-    StructField("score", FloatType()),
-    StructField("riskDate", DateType())
-])
+stediEventSchema = stediEventSchema
 
 # TO-DO: create a spark application object
 spark = SparkSession.builder \
@@ -119,15 +100,8 @@ customerStreamingDF = encodedCustomerDF\
     .withColumn("customer", unbase64(encodedCustomerDF.encodedCustomer).cast("string"))
 
 # TO-DO: parse the JSON in the Customer record and store in a temporary view called CustomerRecords
-customer = StructType([
-    StructField("customerName", StringType()),
-    StructField("email", StringType()),
-    StructField("phone", StringType()),
-    StructField("birthDay", StringType())
-])
-
 customerStreamingDF\
-    .withColumn("customer", from_json("customer", customer)) \
+    .withColumn("customer", from_json("customer", customerSchema)) \
     .select(col('customer.*')) \
     .createOrReplaceTempView("CustomerRecords")
 
