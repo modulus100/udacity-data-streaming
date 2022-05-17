@@ -1,6 +1,6 @@
 from pyspark.sql.types import StructField, StructType, StringType, BooleanType, ArrayType, DateType, FloatType
 
-radisEventSchema = StructType([
+radisSchema = StructType([
     StructField("key", StringType()),
     StructField("existType", StringType()),
     StructField("Ch", BooleanType()),

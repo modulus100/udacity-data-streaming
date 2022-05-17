@@ -1,11 +1,11 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, unbase64, split
 
-from schemas import radisEventSchema, customerSchema, stediEventSchema
+from schemas import radisSchema, customerSchema, stediEventSchema
 
 # TO-DO: create a StructType for the Kafka redis-server topic which has all changes made to Redis - before Spark 3.0.0,
 # schema inference is not automatic
-radisServerTopicStructure = radisEventSchema
+radisServerTopicStructure = radisSchema
 
 # TO-DO: create a StructType for the Customer JSON that comes from Redis- before Spark 3.0.0,
 # schema inference is not automatic
