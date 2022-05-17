@@ -14,13 +14,13 @@ radisSchema = StructType([
 ])
 
 customerSchema = StructType([
-    StructField("customer", StringType()),
+    StructField("customerName", StringType()),
     StructField("score", StringType()),
     StructField("email", StringType()),
     StructField("birthYear", StringType())
 ])
 
-stediEventSchema = StructType([
+riskEventSchema = StructType([
     StructField("customer", StringType()),
     StructField("score", FloatType()),
     StructField("riskDate", DateType())

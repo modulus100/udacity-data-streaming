@@ -1,11 +1,12 @@
 from pyspark.sql import SparkSession
-from pyspark.sql.functions import from_json, col, unbase64, split
+from pyspark.sql.functions import from_json, col, unbase64, split, lit
+from pyspark.sql.types import StringType
 
-from schemas import radisSchema, customerSchema, stediEventSchema
+from schemas import radisSchema, customerSchema, riskEventSchema
 
 # TO-DO: create a StructType for the Kafka redis-server topic which has all changes made to Redis - before Spark 3.0.0,
 # schema inference is not automatic
-radisServerTopicStructure = radisSchema
+radisServerSchema = radisSchema
 
 # TO-DO: create a StructType for the Customer JSON that comes from Redis- before Spark 3.0.0,
 # schema inference is not automatic
@@ -13,7 +14,7 @@ radisCustomerJsonSchema = customerSchema
 
 # TO-DO: create a StructType for the Kafka stedi-events topic which has the Customer Risk JSON that comes from
 # Redis- before Spark 3.0.0, schema inference is not automatic
-radisStediEventTopicStructure = stediEventSchema
+radisStediEventTopicStructure = riskEventSchema
 
 # TO-DO: create a spark application object
 spark = SparkSession.builder \
@@ -26,16 +27,16 @@ spark.sparkContext.setLogLevel('WARN')
 # TO-DO: using the spark application object, read a streaming dataframe from the Kafka topic redis-server as the source
 # Be sure to specify the option that reads all the events from the topic including those that were published before
 # you started the spark stream
-stediEventsDF = spark\
+stediEventsListenerDF = spark\
     .readStream\
     .format("kafka")\
     .option("kafka.bootstrap.servers", "localhost:9092")\
-    .option("subscribe","redis-server")\
-    .option("startingOffsets","earliest")\
+    .option("subscribe", "redis-server")\
+    .option("startingOffsets", "earliest")\
     .load()
 
 # TO-DO: cast the value column in the streaming dataframe as a STRING
-kafkaRedisDF = stediEventsDF.selectExpr("cast(value as string) value")
+kafkaRedisDF = stediEventsListenerDF.selectExpr("cast(value as string) value")
 
 # TO-DO:; parse the single column "value" with a json object in it, like this:
 # +------------+
@@ -68,16 +69,20 @@ kafkaRedisDF = stediEventsDF.selectExpr("cast(value as string) value")
 # +------------+-----+-----------+------------+---------+-----+-----+-----------------+
 #
 # storing them in a temporary view called RedisSortedSet
-kafkaRedisDF\
-    .withColumn("value", from_json("value", radisServerTopicStructure)) \
-    .select(col('value.existType'), col('value.Ch'), col('value.Incr'), col('value.zSetEntries')) \
+kafkaRedisDF.withColumn("value", from_json("value", radisServerSchema))\
+    .select(('value.key', 'value.existType', 'value.Ch', 'value.Incr', 'value.zSetEntries'))\
+    .withColumnRenamed('Ch', 'ch')\
+    .withColumnRenamed('Incr', 'incr')\
+    .withColumn('value', lit(None).cast(StringType()))\
+    .withColumn('expiredType', lit(None).cast(StringType()))\
+    .withColumn('expiredValue', lit(None).cast(StringType()))\
     .createOrReplaceTempView("RedisSortedSet")
 
 # TO-DO: execute a sql statement against a temporary view, which statement takes the element field from the 0th
 # element in the array of structs and create a column called encodedCustomer
 # the reason we do it this way is that the syntax available select against a view is different than a dataframe,
 # and it makes it easy to select the nth element of an array in a sql column
-encodedCustomerDF = spark.sql("select zSetEntries[0].element as encodedCustomer from RedisSortedSet")
+encodedCustomerDF = spark.sql("select key, zSetEntries[0].element as encodedCustomer from RedisSortedSet")
 
 # TO-DO: take the encodedCustomer column which is base64 encoded at first like this:
 # +--------------------+
@@ -108,19 +113,16 @@ customerDF\
 # where they are not null as a new dataframe called emailAndBirthDayStreamingDF
 emailAndBirthDayStreamingDF = spark.sql(
     """
-    select * from CustomerRecords
-    where email is not null AND birthDay is not null
+    select email, birthDay from CustomerRecords
+    where email is not null and birthDay is not null
     """
 )
 
 # TO-DO: from the emailAndBirthDayStreamingDF dataframe select the email and the birth year (using the split function)
 # TO-DO: Split the birth year as a separate field from the birthday
-emailAndBirthDayStreamingDF = emailAndBirthDayStreamingDF\
-    .withColumn('birthYear', split(emailAndBirthDayStreamingDF.birthDay, "-").getItem(0))
-
 # TO-DO: Select only the birth year and email fields as a new streaming data frame called emailAndBirthYearStreamingDF
-emailAndBirthYearDF = emailAndBirthDayStreamingDF\
-    .select(col('email'), col('birthYear'))
+emailAndBirthYearStreamingDF = emailAndBirthDayStreamingDF\
+    .withColumn('email', split(emailAndBirthDayStreamingDF.birthDay, "-").getItem(0).alias("birthYear"))
 
 # TO-DO: sink the emailAndBirthYearStreamingDF dataframe to the console in append mode
 # 
@@ -137,7 +139,7 @@ emailAndBirthYearDF = emailAndBirthDayStreamingDF\
 # |Sarah.Clark@test.com|1957|
 # +--------------------+-----
 
-emailAndBirthYearDF.writeStream\
+emailAndBirthYearStreamingDF.writeStream\
     .outputMode("append")\
     .format("console")\
     .start()\

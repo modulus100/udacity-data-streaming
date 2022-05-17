@@ -1,7 +1,7 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, unbase64, split, expr
 
-from schemas import radisSchema, stediEventSchema, customerSchema
+from schemas import radisSchema, riskEventSchema, customerSchema
 
 # TO-DO: create a StructType for the Kafka redis-server topic which has all changes made to Redis - before Spark
 # 3.0.0, schema inference is not automatic
@@ -13,7 +13,7 @@ customerSchema = customerSchema
 
 # TO-DO: create a StructType for the Kafka stedi-events topic which has the Customer Risk JSON that comes from Redis-
 # before Spark 3.0.0, schema inference is not automatic
-stediEventSchema = stediEventSchema
+riskEventSchema = riskEventSchema
 
 # TO-DO: create a spark application object
 spark = SparkSession.builder \
@@ -109,14 +109,14 @@ customerStreamingDF\
 # where they are not null as a new dataframe called emailAndBirthDayStreamingDF
 emailAndBirthDayStreamingDF = spark.sql(
     """"
-    select * from CustomerRecords
-    where email is not null AND birthDay is not null
+    select email, birthDay from CustomerRecords
+    where email is not null and birthDay is not null
     """
 )
 
 # TO-DO: Split the birth year as a separate field from the birthday
 emailAndBirthDayStreamingDF = emailAndBirthDayStreamingDF\
-    .withColumn('birthYear', split(emailAndBirthDayStreamingDF.birthDay, "-").getItem(0))
+    .withColumn('birthYear', split(emailAndBirthDayStreamingDF.birthDay, "-").getItem(0).alias("birthYear"))
 
 # TO-DO: Select only the birth year and email fields as a new streaming data frame called emailAndBirthYearStreamingDF
 emailAndBirthYearStreamingDF = emailAndBirthDayStreamingDF\
@@ -153,7 +153,7 @@ kafkaEventsDF = kafkaEventsDF.selectExpr("cast(value as string) value")
 #
 # storing them in a temporary view called CustomerRisk
 kafkaEventsDF\
-    .withColumn("value", from_json("value", stediEventSchema)) \
+    .withColumn("value", from_json("value", riskEventSchema)) \
     .select(col('value.customer'), col('value.score'), col('value.riskDate')) \
     .createOrReplaceTempView("CustomerRisk")
 
