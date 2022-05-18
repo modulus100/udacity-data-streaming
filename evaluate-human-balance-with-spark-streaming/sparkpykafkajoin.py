@@ -180,11 +180,20 @@ stediScoreStreamingDF = customerRiskStreamingDF\
 #
 # In this JSON Format
 # {"customer":"Santosh.Fibonnaci@test.com","score":"28.5","email":"Santosh.Fibonnaci@test.com","birthYear":"1963"}
-stediScoreStreamingDF\
-    .selectExpr("cast(customer as string) as key", "to_json(struct(*)) as value").writeStream \
-    .format("kafka") \
-    .option("kafka.bootstrap.servers", "localhost:9092") \
-    .option("topic", "stedi-score") \
-    .option("checkpointLocation", "/tmp/kafkacheckpoint") \
-    .start() \
-    .awaitTermination()
+processingResultListener = stediScoreStreamingDF\
+    .selectExpr("cast(customer as string) as key", "to_json(struct(*)) as value").writeStream\
+    .format("kafka")\
+    .option("kafka.bootstrap.servers", "localhost:9092")\
+    .option("topic", "risk-processing")\
+    .option("checkpointLocation", "/tmp/kafkacheckpoint")\
+    .start()
+
+consoleStream = stediScoreStreamingDF\
+    .selectExpr("to_json(struct(*)) as value").writeStream\
+    .outputMode('append')\
+    .format('console')\
+    .option('truncate', False)\
+    .start()
+
+processingResultListener.awaitTermination()
+consoleStream.awaitTermination()
