@@ -38,7 +38,7 @@ stediEventsJsonDF = stediMessageDF.selectExpr("cast(value as string) value")
 #
 # storing them in a temporary view called CustomerRisk TO-DO: execute a sql statement against a temporary view,
 # selecting the customer and the score from the temporary view, creating a dataframe called customerRiskStreamingDF
-stediMessageDF\
+stediEventsJsonDF\
     .withColumn("value", from_json("value", riskEventSchema)) \
     .select(col('value.customer'), col('value.score'), col('value.riskDate')) \
     .createOrReplaceTempView("CustomerRisk")
