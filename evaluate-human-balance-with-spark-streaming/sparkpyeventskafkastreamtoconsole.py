@@ -7,7 +7,7 @@ from schemas import riskEventSchema
 # source Be sure to specify the option that reads all the events from the topic including those that were published
 # before you started the spark stream
 spark = SparkSession.builder\
-    .appName("stediEvents")\
+    .appName("stedi-events-pipeline")\
     .getOrCreate()
 spark.sparkContext.setLogLevel('WARN')
 

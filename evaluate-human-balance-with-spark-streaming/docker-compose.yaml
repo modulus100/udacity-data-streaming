@@ -130,7 +130,16 @@ services:
       - ./:/home/workspace/
       - ./spark/jars:/opt/bitnami/spark/.ivy2           
 
-
+  kafdrop:
+    image: obsidiandynamics/kafdrop
+    ports:
+      - "9000:9000"
+    environment:
+      KAFKA_BROKERCONNECT: kafka:19092
+      JVM_OPTS: "-Xms32M -Xmx64M"
+      SERVER_SERVLET_CONTEXTPATH: "/"
+    depends_on:
+      - kafka
  
 
 

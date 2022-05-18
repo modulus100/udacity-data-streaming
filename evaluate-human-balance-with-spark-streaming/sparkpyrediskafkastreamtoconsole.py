@@ -18,7 +18,7 @@ radisStediEventTopicStructure = riskEventSchema
 
 # TO-DO: create a spark application object
 spark = SparkSession.builder \
-    .appName("stedi-app") \
+    .appName("redis-kafka-pipeline") \
     .getOrCreate()
 
 # TO-DO: set the spark log level to WARN
@@ -83,7 +83,7 @@ kafkaRedisDF\
 # element in the array of structs and create a column called encodedCustomer
 # the reason we do it this way is that the syntax available select against a view is different than a dataframe,
 # and it makes it easy to select the nth element of an array in a sql column
-encodedCustomerDF = spark.sql("select key, zSetEntries[0].element as encodedCustomer from RedisSortedSet")
+encodedCustomerDF = spark.sql("select zSetEntries[0].element as encodedCustomer from RedisSortedSet")
 
 # TO-DO: take the encodedCustomer column which is base64 encoded at first like this:
 # +--------------------+
@@ -123,7 +123,9 @@ emailAndBirthDayStreamingDF = spark.sql(
 # TO-DO: Split the birth year as a separate field from the birthday
 # TO-DO: Select only the birth year and email fields as a new streaming data frame called emailAndBirthYearStreamingDF
 emailAndBirthYearStreamingDF = emailAndBirthDayStreamingDF\
-    .withColumn('email', split(emailAndBirthDayStreamingDF.birthDay, "-").getItem(0).alias("birthYear"))
+    .withColumn('email', split(emailAndBirthDayStreamingDF.birthDay, "-").getItem(0))
+
+emailAndBirthYearStreamingDF = emailAndBirthYearStreamingDF.select(col('email'), col('birthYear'))
 
 # TO-DO: sink the emailAndBirthYearStreamingDF dataframe to the console in append mode
 # 
